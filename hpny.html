@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Countdown 2026 - Gửi Quỳnh</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;900&family=Patrick+Hand&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0; overflow: hidden;
+            background: radial-gradient(circle at center bottom, #1a1a2e 0%, #000000 90%);
+            font-family: 'Montserrat', sans-serif;
+            height: 100vh; color: white; touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #canvas-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
+            transition: filter 3s ease-in-out;
+        }
+        canvas { display: block; }
+        
+        body.reading-mode #canvas-container { filter: blur(8px) brightness(0.6); }
+
+        #ui-container {
+            position: absolute; z-index: 10; width: 100%; height: 100%;
+            pointer-events: none; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+        }
+        #btn-start, #mail-wrapper, .sub-letter-btn, .close-modal { pointer-events: auto; cursor: pointer; }
+
+        #btn-start {
+            padding: 15px 50px; font-size: 1.5rem; background: rgba(255,255,255,0.15); 
+            border: 1px solid rgba(255,255,255,0.5); color: #fff; letter-spacing: 3px;
+            border-radius: 50px; text-transform: uppercase; font-weight: 900;
+            transition: 0.3s; backdrop-filter: blur(10px);
+            box-shadow: 0 0 30px rgba(255,255,255,0.2);
+        }
+        #btn-start:active { transform: scale(0.95); }
+
+        /* --- UI CONTAINER CHO COUNTDOWN --- */
+        #countdown-container {
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            gap: 20px; animation: fadeIn 1s ease-out;
+        }
+        @keyframes fadeIn { from{opacity:0; transform: scale(0.9);} to{opacity:1; transform: scale(1);} }
+
+        #year-label {
+            font-size: 6rem; font-weight: 900; color: #fff;
+            text-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+            line-height: 1; margin: 0;
+        }
+
+        #countdown-ui { display: flex; gap: 10px; font-family: 'Share Tech Mono', monospace; }
+        .time-box {
+            display: flex; flex-direction: column; align-items: center;
+            background: rgba(0,0,0,0.6); padding: 10px 15px; border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.15); min-width: 60px; backdrop-filter: blur(5px);
+        }
+        .time-val { font-size: 2.5rem; color: #ff3366; text-shadow: 0 0 15px rgba(255, 51, 102, 0.8); }
+        .time-label { font-size: 0.7rem; color: #ccc; text-transform: uppercase; margin-top: 5px; }
+        
+        /* --- HAPPY NEW YEAR & THƯ --- */
+        #greeting-box {
+            display: none; flex-direction: column; align-items: center;
+            position: relative; top: -5%; width: 90%; max-width: 400px;
+        }
+        .hny-text {
+            font-size: 3rem; line-height: 1.1; font-weight: 900; text-align: center; text-transform: uppercase;
+            background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #00ffff, #0000ff, #8b00ff);
+            background-size: 200% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 30px; text-shadow: 0 10px 30px rgba(255, 255, 255, 0.2);
+            opacity: 0; animation: floatUp 2s ease-out forwards, shine 3s linear infinite;
+        }
+        
+        @keyframes shine { to { background-position: 200% center; } }
+        @keyframes floatUp { from { opacity: 0; transform: translateY(50px); } to { opacity: 1; transform: translateY(0); } }
+
+        #mail-wrapper {
+            position: relative; width: 220px; height: 150px; transition: transform 0.5s;
+        }
+        #mail-wrapper:active { transform: scale(0.95); }
+        
+        .envelope { position: absolute; bottom: 0; width: 100%; height: 100%; background: #f0f0f0; box-shadow: 0 20px 50px rgba(0,0,0,0.6); z-index: 2; border-radius: 0 0 5px 5px; }
+        .envelope-flap { position: absolute; top: 0; left: 0; width: 0; height: 0; border-left: 110px solid transparent; border-right: 110px solid transparent; border-top: 85px solid #e0e0e0; transform-origin: top; transition: 1.2s; z-index: 4; }
+        .envelope-pocket { position: absolute; bottom: 0; left: 0; width: 0; height: 0; border-left: 110px solid transparent; border-right: 110px solid transparent; border-bottom: 90px solid #fff; z-index: 3; border-radius: 0 0 5px 5px;}
+        .seal { position: absolute; top: -85px; left: -20px; width: 40px; height: 40px; background: #d63031; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: rgba(255,255,255,0.9); font-size: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 5; }
+        
+        .letter { 
+            position: absolute; bottom: 10px; left: 10px; width: 200px; height: 130px; background: #fffdf5; 
+            z-index: 1; padding: 20px; box-sizing: border-box; transition: 1.5s; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.1); font-family: 'Patrick Hand', cursive; color: #333; opacity: 0; 
+        }
+        
+        body.reading-mode .envelope-flap { transform: rotateX(180deg); z-index: 0; }
+        body.reading-mode .letter { 
+            bottom: 40px; left: -20px; width: 260px; height: 360px; 
+            opacity: 1; transform: translateY(-30px) scale(1.1); z-index: 6; 
+            box-shadow: 0 30px 80px rgba(0,0,0,0.8); 
+        }
+        body.reading-mode .hny-text { opacity: 0; transition: 0.5s; }
+        .letter-content { opacity: 0; transition: opacity 1s 1s; font-size: 1.1rem; line-height: 1.6; text-align: center; width: 100%; }
+        body.reading-mode .letter-content { opacity: 1; }
+        .hint { position: absolute; bottom: -50px; width: 100%; text-align: center; color: rgba(255,255,255,0.4); font-size: 0.9rem; animation: pulse 2s infinite; pointer-events: none; }
+        @keyframes pulse { 50% { opacity: 0.2; } }
+
+        /* --- SUB LETTERS (3 NHÁNH THƯ) --- */
+        #sub-letters-group {
+            position: absolute; width: 100%; height: 100%; top:0; left: 0; pointer-events: none;
+            display: flex; justify-content: center; align-items: center; z-index: 20;
+        }
+        .sub-letter-btn {
+            position: absolute; width: 50px; height: 50px; border-radius: 50%;
+            background: white; display: flex; justify-content: center; align-items: center;
+            font-size: 24px; box-shadow: 0 0 20px rgba(255,255,255,0.8);
+            opacity: 0; transform: scale(0); transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation: float 3s ease-in-out infinite;
+        }
+        .sub-letter-btn:nth-child(1) { top: 60%; left: 10%; animation-delay: 0s; color: #ff3366; } /* Trái */
+        .sub-letter-btn:nth-child(2) { top: 75%; left: 45%; animation-delay: 1s; color: #ffcc00; } /* Giữa dưới */
+        .sub-letter-btn:nth-child(3) { top: 60%; right: 10%; animation-delay: 2s; color: #33cc33; } /* Phải */
+        
+        body.show-subs .sub-letter-btn { opacity: 1; transform: scale(1); pointer-events: auto; }
+        @keyframes float { 0%,100% {transform: translateY(0) scale(1);} 50% {transform: translateY(-10px) scale(1.1);} }
+
+        /* --- MODAL POPUP --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 100;
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: 0.3s; backdrop-filter: blur(5px);
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-card {
+            background: #fffdf5; width: 85%; max-width: 500px; padding: 30px; border-radius: 10px;
+            font-family: 'Patrick Hand', cursive; color: #333; font-size: 1.2rem; line-height: 1.6;
+            text-align: justify; position: relative;
+            transform: translateY(50px); transition: 0.4s;
+            max-height: 80vh; overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            border: 2px dashed #ff9999;
+        }
+        .modal-overlay.active .modal-card { transform: translateY(0); }
+        .close-modal {
+            position: absolute; top: 10px; right: 15px; font-size: 2rem; color: #aaa; line-height: 0.8;
+            transition: 0.2s;
+        }
+        .close-modal:hover { color: #ff3366; transform: rotate(90deg); }
+        .modal-icon { font-size: 3rem; text-align: center; display: block; margin-bottom: 10px; }
+
+        @media (max-width: 400px) {
+            #year-label { font-size: 4rem; }
+            .time-val { font-size: 1.8rem; }
+            .time-box { min-width: 45px; padding: 5px; }
+            .letter { padding: 10px; }
+            .modal-card { padding: 20px; font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container">
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <div id="ui-container">
+        <button id="btn-start">ĐẾM NGƯỢC NÀO><🥳</button>
+        
+        <div id="countdown-container">
+            <div id="year-label">2026</div>
+            <div id="countdown-ui">
+                <div class="time-box"><div id="d-val" class="time-val">00</div><div class="time-label">Ngày</div></div>
+                <div class="time-box"><div id="h-val" class="time-val">00</div><div class="time-label">Giờ</div></div>
+                <div class="time-box"><div id="m-val" class="time-val">00</div><div class="time-label">Phút</div></div>
+                <div class="time-box"><div id="s-val" class="time-val">03</div><div class="time-label">Giây</div></div>
+            </div>
+        </div>
+
+        <div id="greeting-box">
+            <div class="hny-text">🩵HAPPY<br>❤️‍🔥NEW YEAR💝</div>
+            <div id="mail-wrapper">
+                <div class="envelope"></div>
+                <div class="envelope-pocket"></div>
+                <div class="envelope-flap"><div class="seal">❤️</div></div>
+                <div class="letter">
+                    <div class="letter-content">
+                        <strong>Gửi Quỳnh,</strong><br><br>
+                        Năm mới này tớ có 3 điều đặc biệt muốn gửi gắm cho cậu. Hãy mở những chiếc hộp may mắn đang bay xung quanh nhé!<br>
+                        <span style="color: #d63031; font-size: 1.5rem;">♥</span>
+                    </div>
+                </div>
+                <div class="hint">(Chạm vào thư để mở)</div>
+            </div>
+            
+            <div id="sub-letters-group">
+                <div class="sub-letter-btn" onclick="openModal(1)">🌱</div>
+                <div class="sub-letter-btn" onclick="openModal(2)">✨</div>
+                <div class="sub-letter-btn" onclick="openModal(3)">🎓</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-1">
+        <div class="modal-card">
+            <span class="close-modal" onclick="closeModal(1)">&times;</span>
+            <span class="modal-icon">🌱</span>
+            <strong>Gửi cậu, cô gái mạnh mẽ!</strong><br><br>
+            Hy vọng cậu sẽ biết cách chăm sóc chính mình, giữ một trái tim kiên cường 💪 và một tâm hồn lạc quan 🌻, không phải khóc vì những thứ không đáng. Cuộc sống không phải lúc nào cũng dễ dàng, nhưng hãy tin rằng mỗi thử thách đều là một bước đệm để Quỳnh trưởng thành hơn 🦋.
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-2">
+        <div class="modal-card">
+            <span class="close-modal" onclick="closeModal(2)">&times;</span>
+            <span class="modal-icon">✨</span>
+            <strong>Happy New Year!</strong><br><br>
+            Chúc Quỳnh một năm mới ngập tràn niềm vui 🎉, luôn biết yêu thương và trân trọng bản thân 💖. Mong rằng tất cả những điều tốt đẹp nhất sẽ đến với người trong năm này. Một năm mới tuyệt vời đang chờ đón phía trước, hãy bỏ những muộn phiền của năm cũ và đón một năm mới thật vui vẻ nhé 🌈!
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-3">
+        <div class="modal-card">
+            <span class="close-modal" onclick="closeModal(3)">&times;</span>
+            <span class="modal-icon">🎓</span>
+            <strong>Hứa với nhau nhé!</strong><br><br>
+            Dù có những ngày học mệt 📚, bài vở nhiều và đôi lúc muốn bỏ cuộc, mong tụi mình vẫn có thể ngồi cạnh nhau 🤝, cùng nhắc nhau cố gắng thêm chút nữa, cùng nhau tiến tới tương lai. Đạt được điều mong muốn và cùng nhau đỗ vào trường cấp 3 mong muốn nhé 🏫. Rồi đây cũng chỉ còn là những kỷ niệm, để sau này khi nhớ lại, sẽ thấy khoảng thời gian ấy không chỉ là học hành mà còn là những kỷ niệm rất đẹp ❤️.
+        </div>
+    </div>
+
+    <script>
+        // --- ÂM THANH ---
+        const AudioSys = {
+            ctx: null,
+            init() { if(!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
+            play(type) {
+                if(!this.ctx) return;
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                if (type === 'launch') {
+                    osc.frequency.setValueAtTime(150, t); osc.frequency.exponentialRampToValueAtTime(600, t + 1.2);
+                    gain.gain.setValueAtTime(0.05, t); gain.gain.linearRampToValueAtTime(0, t + 1.2);
+                } else if (type === 'boom') {
+                    osc.frequency.setValueAtTime(100, t); osc.frequency.exponentialRampToValueAtTime(1, t + 0.5);
+                    gain.gain.setValueAtTime(2, t); gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+                } else if (type === 'crack') {
+                    osc.type = 'square'; osc.frequency.setValueAtTime(400, t); osc.frequency.exponentialRampToValueAtTime(50, t + 0.1);
+                    gain.gain.setValueAtTime(0.1, t); gain.gain.exponentialRampToValueAtTime(0, t + 0.1);
+                }
+                osc.connect(gain); gain.connect(this.ctx.destination); osc.start(t); osc.stop(t + 2);
+            }
+        };
+
+        // --- HỆ THỐNG VẬT LÝ PHÁO HOA ---
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let w, h, pixelRatio;
+        const r = (min, max) => Math.random() * (max - min) + min;
+
+        function resize() { 
+            pixelRatio = window.devicePixelRatio || 1;
+            w = window.innerWidth; 
+            h = window.innerHeight;
+            canvas.width = w * pixelRatio;
+            canvas.height = h * pixelRatio;
+            ctx.scale(pixelRatio, pixelRatio);
+        }
+        window.addEventListener('resize', resize); 
+        resize();
+
+        const PHY = { g: 0.03, f: 0.96, trail: 0.15 };
+
+        class Particle {
+            constructor(x, y, hue, vx, vy, type) {
+                this.x = x; this.y = y; this.hue = hue;
+                this.vx = vx; this.vy = vy;
+                this.type = type || 'spark'; 
+                this.alpha = 1;
+                this.life = r(100, 200);
+                this.decay = r(0.008, 0.015); 
+            }
+            update() {
+                this.vx *= PHY.f; this.vy *= PHY.f; this.vy += PHY.g;
+                this.x += this.vx; this.y += this.vy;
+                this.alpha -= this.decay;
+                if(this.type === 'spark' && Math.random() < 0.1) this.alpha = Math.random(); 
+            }
+            draw(ctx) {
+                if (this.alpha <= 0) return;
+                ctx.save(); ctx.globalAlpha = this.alpha; ctx.globalCompositeOperation = 'lighter';
+                ctx.fillStyle = `hsla(${this.hue}, 100%, 60%, ${this.alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, (this.type === 'core' ? 2.5 : 1.8), 0, Math.PI * 2);
+                ctx.fill(); ctx.restore();
+            }
+        }
+
+        class Rocket {
+            constructor() {
+                this.x = r(w * 0.1, w * 0.9); 
+                this.y = h;
+                this.targetY = r(h * 0.1, h * 0.4); 
+                this.vx = r(-2, 2); 
+                this.vy = -r(10, 14); 
+                this.hue = r(0, 360);
+                this.trail = [];
+                AudioSys.play('launch');
+            }
+            update() {
+                this.x += this.vx; this.y += this.vy; this.vy += 0.15;
+                this.trail.push({x: this.x, y: this.y}); if (this.trail.length > 8) this.trail.shift();
+                if (this.vy >= 0 || this.y <= this.targetY) { this.explode(); return false; }
+                return true;
+            }
+            draw(ctx) {
+                ctx.save(); ctx.strokeStyle = `rgba(255,255,255,0.3)`; ctx.lineWidth = 1.5; ctx.beginPath();
+                if (this.trail.length) { ctx.moveTo(this.trail[0].x, this.trail[0].y); for (let p of this.trail) ctx.lineTo(p.x, p.y); }
+                ctx.stroke(); ctx.restore();
+            }
+
+            explode() {
+                AudioSys.play('boom');
+                const shapeType = Math.random();
+                const cx = this.x; const cy = this.y; const hue = this.hue;
+                const scale = (w < 600) ? 0.9 : 1.2; 
+                const starSpeed = 7 * scale;
+                const ringSpeed = 9 * scale;
+                const palmSpeed = 8 * scale;
+
+                if (shapeType < 0.2) { 
+                    const points = 5; const steps = points * 2;
+                    for (let i = 0; i < 80; i++) {
+                        const angle = (Math.PI * 2 / steps) * (i % steps); 
+                        const isOuter = (i % 2 === 0);
+                        const v = (isOuter ? starSpeed : starSpeed * 0.4) + r(-0.5, 0.5); 
+                        const vx = Math.cos(angle - Math.PI/2) * v; const vy = Math.sin(angle - Math.PI/2) * v;
+                        particles.push(new Particle(cx, cy, hue, vx, vy, 'core'));
+                    }
+                    for(let j=0; j<40; j++) {
+                        const a = r(0, Math.PI*2); const s = r(0,3);
+                        particles.push(new Particle(cx, cy, hue, Math.cos(a)*s, Math.sin(a)*s, 'spark'));
+                    }
+                }
+                else if (shapeType < 0.4) { 
+                    for (let i = 0; i < 120; i++) { 
+                        const angle = r(0, Math.PI * 2); const speed = r(starSpeed, starSpeed + 3);
+                        particles.push(new Particle(cx, cy, hue, Math.cos(angle)*speed, Math.sin(angle)*speed, 'core'));
+                    }
+                    const hueInner = (hue + 180) % 360; 
+                    for (let i = 0; i < 60; i++) {
+                        const angle = r(0, Math.PI * 2); const speed = r(1, 4);
+                        particles.push(new Particle(cx, cy, hueInner, Math.cos(angle)*speed, Math.sin(angle)*speed, 'spark'));
+                    }
+                }
+                else if (shapeType < 0.6) {
+                    for (let i = 0; i < 80; i++) {
+                        const angle = (Math.PI*2 / 80) * i;
+                        const vx = Math.cos(angle) * ringSpeed; const vy = Math.sin(angle) * (ringSpeed * 0.25); 
+                        particles.push(new Particle(cx, cy, hue, vx, vy, 'core'));
+                    }
+                    for (let i = 0; i < 50; i++) {
+                         const angle = r(0, Math.PI*2); const s = ringSpeed * 0.6;
+                         particles.push(new Particle(cx, cy, (hue+40)%360, Math.cos(angle)*s, Math.sin(angle)*s, 'spark'));
+                    }
+                }
+                else { 
+                    const count = 160; 
+                    for (let i = 0; i < count; i++) {
+                        const angle = r(0, Math.PI * 2); const speed = r(1, palmSpeed);
+                        particles.push(new Particle(cx, cy, hue, Math.cos(angle)*speed, Math.sin(angle)*speed, 'spark'));
+                    }
+                    if (Math.random() < 0.5) setTimeout(() => AudioSys.play('crack'), 100);
+                }
+            }
+        }
+
+        let rockets = [];
+        let particles = [];
+        let active = false;
+
+        function loop() {
+            requestAnimationFrame(loop);
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillStyle = `rgba(0, 0, 0, ${PHY.trail})`; 
+            ctx.fillRect(0, 0, w, h);
+            ctx.globalCompositeOperation = 'source-over';
+
+            if (active && Math.random() < 0.04) rockets.push(new Rocket()); 
+
+            rockets = rockets.filter(r => { r.draw(ctx); if (r.update()) return true; r.explode(); return false; });
+            particles = particles.filter(p => { p.draw(ctx); p.update(); return p.alpha > 0; });
+        }
+        loop();
+
+        // --- UI LOGIC ---
+        const btnStart = document.getElementById('btn-start');
+        const countdownContainer = document.getElementById('countdown-container');
+        const greetingBox = document.getElementById('greeting-box');
+        const mailWrapper = document.getElementById('mail-wrapper');
+        const elS = document.getElementById('s-val');
+
+        btnStart.addEventListener('click', () => {
+            AudioSys.init();
+            btnStart.style.opacity = 0; setTimeout(()=> btnStart.style.display='none', 300);
+            countdownContainer.style.display = 'flex';
+            
+            let count = 3;
+            elS.innerText = "03";
+            
+            const timer = setInterval(() => {
+                count--;
+                elS.innerText = "0" + count;
+                elS.style.color = '#ff0000';
+
+                if (count < 0) {
+                    clearInterval(timer);
+                    countdownContainer.style.display = 'none';
+                    greetingBox.style.display = 'flex';
+                    active = true; 
+                    rockets.push(new Rocket());
+                }
+            }, 1000);
+        });
+
+        mailWrapper.addEventListener('click', () => {
+            if (!document.body.classList.contains('reading-mode')) {
+                document.body.classList.add('reading-mode');
+                document.querySelector('.hint').style.display='none';
+                
+                // Hiện các nhánh thư phụ sau 1.5 giây
+                setTimeout(() => {
+                    document.body.classList.add('show-subs');
+                }, 1500);
+
+                setTimeout(() => rockets.push(new Rocket()), 300);
+                setTimeout(() => rockets.push(new Rocket()), 900);
+            }
+        });
+
+        // --- MODAL LOGIC ---
+        function openModal(id) {
+            document.getElementById('modal-' + id).classList.add('active');
+        }
+        function closeModal(id) {
+            document.getElementById('modal-' + id).classList.remove('active');
+        }
+    </script>
+</body>
+</html>
